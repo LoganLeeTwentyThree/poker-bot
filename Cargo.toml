@@ -1,0 +1,9 @@
+[package]
+name = "poker-bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+colored = "3.0.0"
+rand = "0.9.2"
+rs_poker = "4.1.0"
