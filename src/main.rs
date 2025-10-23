@@ -50,16 +50,8 @@ fn main() {
     println!("Your chance to win is {}%", chance_to_win * 100.0);
 
 
-    for _ in 0..4
-    {
-        match bot.decide()
-        {
-            Action::Fold => fold(),
-            Action::Check => check(),
-            Action::Call(i) => call(i),
-            Action::Raise(i) => raise(i),
-        }
-
+    //for _ in 0..4
+    //{
         loop {
             let next_action = prompt("Call changed (y/n)?");
             match next_action.as_str()
@@ -75,9 +67,19 @@ fn main() {
                 _ => println!("Invalid input. Try again.")
             }
         }
+
+        match bot.decide()
+        {
+            Action::Fold => fold(),
+            Action::Check => check(),
+            Action::Call(i) => call(i),
+            Action::Raise(i) => raise(i),
+        }
+
+        
         
 
-    }
+    //}
     
     // maybe raise sometimes?
 
@@ -101,7 +103,7 @@ fn raise(amount : i32)
 
 fn call(amount : i32)
 {
-    println!("{}: {}", "CALL :|".green(), amount)
+    println!("{}: {}", "CALL :) ".green(), amount)
 }
 
 fn check()

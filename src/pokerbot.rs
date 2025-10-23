@@ -24,9 +24,15 @@ pub struct PokerBot {
 impl PokerBot {
     pub fn decide(&mut self) -> Action {
         let pot_odds = self.state.to_call as f32 / (self.state.pot_size + self.state.to_call) as f32;
-        if self.get_equity() < pot_odds {
+        let equity = self.get_equity();
+        if equity < pot_odds 
+        {
             Action::Fold
-        } else {
+        } else if equity > 0.7 
+        {
+            Action::Raise((self.state.to_call as f32 * 2.5) as i32)
+        }else 
+        {
             Action::Call(self.state.to_call)
         }
     }
