@@ -1,6 +1,5 @@
 use std::{io};
-use rs_poker::{core::*, holdem::*};
-use colored::*;
+use rs_poker::{core::*};
 
 mod pokerbot;
 use pokerbot::*;
@@ -25,11 +24,18 @@ fn main() {
     let hand_string = prompt("Enter your hand");
     let to_call = prompt("Enter the blind").parse::<i32>().unwrap();
     let stack = prompt("Enter your stack").parse::<i32>().unwrap();
+    let blind = prompt("Are you the blind? (y/n)");
+
+    let mut temp_bet = 0;
+    if blind.to_lowercase() == "y"
+    {
+        temp_bet = to_call;
+    }
 
     
 
     let my_hand = Hand::new_from_str(&hand_string)
-        .map_err(|e|println!("{e}"))
+        .map_err(|e|e.to_string())
         .unwrap();
 
 
@@ -40,10 +46,15 @@ fn main() {
         pot_size: to_call + to_call / 2,
         to_call: to_call,
         stack: stack,
-        num_opponents: num_opps
+        num_opponents: num_opps,
+        mine_in_pot: temp_bet,
+        start_blind: to_call,
     };
 
+    
+
     let mut bot = PokerBot { state: state };
+
 
     loop {
         println!("\n===== GAME STATE =====");
@@ -51,15 +62,18 @@ fn main() {
         println!("To call: {}", bot.state.to_call);
         println!("Board: {:?}", bot.state.board);
         println!("Stack: {}", bot.state.stack);
+        println!("num_opps: {}", bot.state.num_opponents);
+        println!("======================");
 
-        // Ask bot for action
-        let action = bot.decide();
-        match action {
-            Action::Fold => { fold(); break; }
-            Action::Check => check(),
-            Action::Call(x) => call(x),
-            Action::Raise(x) => raise(x),
+        
+        // to_call
+        let to_call_change = prompt("Did to_call change? (y/n)");
+        if to_call_change.to_lowercase() == "y" {
+            bot.state.to_call = prompt("Enter new to_call").parse().unwrap();
         }
+
+        // pot
+        bot.state.pot_size = prompt("Enter new pot size").parse().unwrap();
 
         // Ask player if board has changed
         let update = prompt("Did a new card appear on the board? (y/n)");
@@ -72,40 +86,24 @@ fn main() {
             }
         }
 
-        // Optionally update pot and to_call
-        let change = prompt("Did pot or to_call change? (y/n)");
-        if change.to_lowercase() == "y" {
-            bot.state.pot_size = prompt("Enter new pot size").parse().unwrap();
-            bot.state.to_call = prompt("Enter new to_call").parse().unwrap();
+        // Ask player if anyone folded
+        let player_change = prompt("Did anyone fold?");
+        if player_change.to_lowercase() == "y"
+        {
+            let num_folds : i8 = prompt("How many?").parse().unwrap();
+            bot.remove_opps(num_folds);
         }
+        
 
-        // Option to end hand
-        let cont = prompt("Continue this hand? (y/n)");
-        if cont.to_lowercase() != "y" {
-            break;
+        // Ask bot for action
+        if bot.state.to_call == 0
+        {
+            bot.decide(true)
+        }else {
+            bot.decide(false)
         }
+        
     }
 
     
-}
-
-fn raise(amount : i32)
-{
-    println!("{}: {}", "RAISE >:D".green(), amount)
-}
-
-fn call(amount : i32)
-{
-    println!("{}: {}", "CALL :) ".green(), amount)
-}
-
-fn check()
-{
-    println!("{}", "CHECK :S".yellow());
-}
-
-fn fold()
-{
-    println!("{}", "FOLD :C".red());
-    std::process::exit(0);
 }
