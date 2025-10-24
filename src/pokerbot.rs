@@ -25,14 +25,31 @@ impl PokerBot {
     pub fn decide(&mut self) -> Action {
         let pot_odds = self.state.to_call as f32 / (self.state.pot_size + self.state.to_call) as f32;
         let equity = self.get_equity();
+
+        println!(
+            "Equity: {:.2}%, Pot odds: {:.2}%",
+            equity * 100.0,
+            pot_odds * 100.0
+        );
+
+        //preflop
+        if self.state.board.is_empty() {
+            return Action::Call(self.state.to_call)
+        }
+        
+        
         if equity < pot_odds 
         {
             Action::Fold
-        } else if equity > 0.7 
-        {
-            Action::Raise((self.state.to_call as f32 * 2.5) as i32)
-        }else 
-        {
+        } else if equity > pot_odds * 2.0 && equity > 0.6 {
+            // Very strong hand → raise
+            let raise_amount = (self.state.to_call as f32 * 2.5) as i32;
+            Action::Raise(raise_amount)
+        } else if self.state.to_call == 0 {
+            // Nothing to call → check
+            Action::Check
+        } else {
+            // Profitable to call
             Action::Call(self.state.to_call)
         }
     }
@@ -45,33 +62,28 @@ impl PokerBot {
     pub fn get_equity(&mut self) -> f32 {
         let mut rng = rand::rng();
         let mut all_hands : Vec<Hand> = Vec::new();
-        all_hands.push(self.state.my_hand);
+        let mut my_hand_board = Hand::new_with_cards(self.state.board.clone());
+        let _ = self.state.my_hand.cards().map(|card| my_hand_board.insert(card));
+        all_hands.push(my_hand_board);
 
         
         let flat_hands = RangeParser::parse_many("22+,A2s+,K9o+").unwrap();
 
-        let mut wins = vec![0; (self.state.num_opponents + 1) as usize];
+        let mut wins = 0.0;
 
-        for _ in 0..100_000 {
+        for _ in 0..1000 {
             let mut this_hands = all_hands.clone();
             for _ in 0..self.state.num_opponents {
                 let index = rng.random_range(0..flat_hands.len());
                 let fh = &flat_hands[index];
-                let cards: Vec<Card> = fh.cards().collect();
+                let mut cards: Vec<Card> = fh.cards().collect();
+                let _ = self.state.board.iter().map(|card|cards.push(*card)); // add community cards
                 this_hands.push(Hand::new_with_cards(cards));
             }
 
-            let mut mc_game = MonteCarloGame::new(this_hands).unwrap();
-            let r = mc_game.simulate();
-            mc_game.reset();
-
-            if let Some(i) = r.0.ones().next() {
-                wins[i] += 1;
-            }
+            let mut game = MonteCarloGame::new(this_hands).unwrap();
+            wins += game.estimate_equity(1000)[0];
         }
-
-        // compute probability 
-        let total_games = wins.iter().sum::<i32>() as f32;
-        wins[0] as f32 / total_games
+        wins / 1000.0
     }
 }

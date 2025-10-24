@@ -1,6 +1,5 @@
 use std::{io};
 use rs_poker::{core::*, holdem::*};
-use rand::*;
 use colored::*;
 
 mod pokerbot;
@@ -45,53 +44,47 @@ fn main() {
     };
 
     let mut bot = PokerBot { state: state };
-   
-    let chance_to_win = bot.get_equity();
-    println!("Your chance to win is {}%", chance_to_win * 100.0);
 
+    loop {
+        println!("\n===== GAME STATE =====");
+        println!("Pot size: {}", bot.state.pot_size);
+        println!("To call: {}", bot.state.to_call);
+        println!("Board: {:?}", bot.state.board);
+        println!("Stack: {}", bot.state.stack);
 
-    //for _ in 0..4
-    //{
-        loop {
-            let next_action = prompt("Call changed (y/n)?");
-            match next_action.as_str()
+        // Ask bot for action
+        let action = bot.decide();
+        match action {
+            Action::Fold => { fold(); break; }
+            Action::Check => check(),
+            Action::Call(x) => call(x),
+            Action::Raise(x) => raise(x),
+        }
+
+        // Ask player if board has changed
+        let update = prompt("Did a new card appear on the board? (y/n)");
+        if update.to_lowercase() == "y" {
+            let num_cards : i32 = prompt("How many?").parse().unwrap();
+            for _ in 0..num_cards
             {
-                "y" => {
-                    //can fold, raise, call
-                    break
-                },
-                "n" => {
-                    //can fold, check, raise, call
-                    break
-                },
-                _ => println!("Invalid input. Try again.")
+                let new_card_str = prompt("Enter new card (e.g. Ah)");
+                bot.add_to_board(Hand::new_from_str(&new_card_str).unwrap().cards().collect::<Vec<Card>>()[0]);
             }
         }
 
-        match bot.decide()
-        {
-            Action::Fold => fold(),
-            Action::Check => check(),
-            Action::Call(i) => call(i),
-            Action::Raise(i) => raise(i),
+        // Optionally update pot and to_call
+        let change = prompt("Did pot or to_call change? (y/n)");
+        if change.to_lowercase() == "y" {
+            bot.state.pot_size = prompt("Enter new pot size").parse().unwrap();
+            bot.state.to_call = prompt("Enter new to_call").parse().unwrap();
         }
 
-        
-        
-
-    //}
-    
-    // maybe raise sometimes?
-
-    //prompt for first card
-    //check/raise/fold based on new probabilities
-    //repeat for second and third cards
-    
-    
-
-    
-
-    
+        // Option to end hand
+        let cont = prompt("Continue this hand? (y/n)");
+        if cont.to_lowercase() != "y" {
+            break;
+        }
+    }
 
     
 }
